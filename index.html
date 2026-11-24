@@ -133,6 +133,27 @@ h1,h2,h3{margin:0;}
   transition:opacity .15s ease, transform .15s ease;
 }
 .serve-flash.show{opacity:1; transform:translateX(-50%) scale(1);}
+/* 手順エラー表示（オーバーレイのみ。レイアウトは一切ずらさない） */
+.error-flash{
+  position:fixed; left:50%; top:66px; transform:translateX(-50%) scale(.92); z-index:99;
+  background:#c81e1e; color:#fff; padding:12px 22px; border-radius:14px;
+  font-size:16px; font-weight:800; line-height:1.45; max-width:min(92vw,560px); text-align:center;
+  box-shadow:0 6px 22px rgba(0,0,0,.35); opacity:0; pointer-events:none;
+  transition:opacity .15s ease, transform .15s ease;
+}
+.error-flash.show{opacity:1; transform:translateX(-50%) scale(1);}
+/* 手順ロック中のゾーン：ボタンは薄色になり、押しても記録されずエラーが出る */
+.step-zone.locked :is(.chip, .actor-btn, .unknown-btn){
+  background:#edf1f7; color:#8593ad; border-color:var(--line); box-shadow:none;
+}
+.step-zone.locked .actor-btn.on{ background:#edf1f7; color:#8593ad; }
+/* 「誰が」ゾーン見出し右の『不明』ボタン（選手が分からないときに手順②を進める） */
+.unknown-btn{
+  margin-left:auto; flex:none; height:24px; padding:0 12px; border-radius:999px;
+  border:1px solid var(--line); background:#fff; color:var(--sub);
+  font-size:12px; font-weight:800; cursor:pointer;
+}
+.unknown-btn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
 .setend-banner{
   margin:0 12px; background:var(--good-bg); color:var(--good-tx); border:1px solid var(--good);
   border-radius:12px; padding:8px 14px; font-weight:800; font-size:15px;
@@ -223,8 +244,8 @@ table.book tr.win-us td.c-point.us{background:var(--good-bg);}
 .note-group-label{font-size:12px; font-weight:900; margin:0 0 2px; line-height:1.25; white-space:nowrap;}
 /* ===== 入力フローガイド（①得点→②誰が→③摘要：順番バッジ＋次のゾーンの発光） =====
    発光は box-shadow のアニメーションのみで、レイアウトは一切ずらさない。
-   摘要・選手選択は任意入力なので、ガイドは誘導のみ（光っていないゾーンも押せる）。 */
-.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:2px;}
+   手順が違うゾーンはロックされ（薄色表示）、押しても記録されずエラーが表示される。 */
+.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:1px;}
 .step-badge{
   flex:none; width:17px; height:17px; border-radius:50%; background:var(--sub); color:#fff;
   font-size:11px; font-weight:900; line-height:1;
@@ -528,6 +549,7 @@ table.stats-table td:first-child{text-align:left; font-weight:700;}
 <div id="modal-holder"></div>
 <div class="toast" id="toast"></div>
 <div class="serve-flash" id="serve-flash" aria-live="polite"></div>
+<div class="error-flash" id="error-flash" role="alert"></div>
 
 <!-- 印刷専用エリア -->
 <div id="print-area"></div>
@@ -584,6 +606,7 @@ let statsSetIdx = 0;        // 統計のスコア推移で表示中のセット�
 let serveFlash = null;      // サイドアウト直後の一時表示 {team, matchId, setIdx, logLen}（保存しない）
 let serveFlashTimer = null; // サーブ権フラッシュの消去タイマー
 let guideStep = 1;          // 入力フローガイド：次に押すゾーン（1=得点 2=誰が 3=摘要）。保存しない一時状態
+let actorSkip = false;      // 手順②を『不明』で進めたか（選手なしで摘要を付ける）。保存しない一時状態
 const SERVE_FLASH_MS = 1300; // サーブ権フラッシュの表示時間（ms）
 
 function loadDB(){
@@ -745,6 +768,22 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove("show"), 2400);
 }
+/* 手順エラー表示：画面上部の赤い帯に「何が違うか＋次に何を押すか」を出す。
+   オーバーレイ表示のみでレイアウトは一切ずらさない。次の正しい操作で消える。 */
+let errorTimer = null;
+function showError(msg){
+  const el = document.getElementById("error-flash");
+  if(!el) return;
+  el.textContent = "⚠ " + msg;
+  el.classList.add("show");
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(()=> el.classList.remove("show"), 4500);
+}
+function clearError(){
+  const el = document.getElementById("error-flash");
+  if(el) el.classList.remove("show");
+  clearTimeout(errorTimer);
+}
 /* ---------- サーブ権フラッシュ（サイドアウト時の一時表示） ----------
    状態は serveFlash に「どの試合・セット・ログ長で発生したか」を持たせ、
    描画側は現在の状態と一致するときだけコートのパルスを付ける。
@@ -818,7 +857,7 @@ function renderHome(){
   });
 }
 function openMatch(id){
-  curMatchId = id; curSetIdx = 0; setupOpen = false; selActor = null; utilOpen = false;
+  curMatchId = id; curSetIdx = 0; setupOpen = false; selActor = null; actorSkip = false; utilOpen = false;
   matchView = "record"; statsSetIdx = 0;
   clearServeFlash();
   guideStep = deriveGuideStep();
@@ -858,7 +897,7 @@ function renderMatch(){
   if(canAddNextSet(m)) th += '<button class="set-tab" id="btn-add-set">＋ 次のセット</button>';
   th += '<button class="set-tab" id="btn-toggle-setup" style="margin-left:auto;">⚙ セット設定（サーブ順）</button>';
   tabs.innerHTML = th;
-  tabs.querySelectorAll("[data-settab]").forEach(b=> b.onclick = ()=>{ curSetIdx = Number(b.getAttribute("data-settab")); selActor = null; clearServeFlash(); guideStep = deriveGuideStep(); renderMatch(); });
+  tabs.querySelectorAll("[data-settab]").forEach(b=> b.onclick = ()=>{ curSetIdx = Number(b.getAttribute("data-settab")); selActor = null; actorSkip = false; clearServeFlash(); guideStep = deriveGuideStep(); renderMatch(); });
   const addBtn = document.getElementById("btn-add-set");
   if(addBtn) addBtn.onclick = addNextSet;
   document.getElementById("btn-toggle-setup").onclick = ()=>{ setupOpen = !setupOpen; renderMatch(); };
@@ -920,7 +959,7 @@ function renderSetEnd(m, s, st){
       '<button class="btn" id="btn-reopen-set">終了を取り消す</button></div>';
     h.innerHTML = html;
     document.getElementById("btn-reopen-set").onclick = ()=>{
-      s.finished = false; s.finalUs = null; s.finalThem = null; guideStep = deriveGuideStep(); saveDB(); renderMatch();
+      s.finished = false; s.finalUs = null; s.finalThem = null; actorSkip = false; guideStep = deriveGuideStep(); saveDB(); renderMatch();
     };
   } else if(setEndReached(s, st, setTargetFor(m, curSetIdx))){
     html += '<div class="setend-banner">🏁 セット終了の条件（' + setTargetFor(m, curSetIdx) + '点・2点差）を満たしました。<button class="btn primary" id="btn-finish-set">このセットを終了する</button></div>';
@@ -945,7 +984,7 @@ function addNextSet(){
   const ns = newSetObj(prev.firstServe === "us" ? "them" : "us");
   m.sets.push(ns);
   curSetIdx = m.sets.length - 1;
-  setupOpen = true; selActor = null;
+  setupOpen = true; selActor = null; actorSkip = false;
   guideStep = deriveGuideStep();
   saveDB(); clearServeFlash(); renderMatch();
   toast("第" + m.sets.length + "セットを作成しました。サーブ順を設定してください");
@@ -973,11 +1012,13 @@ function renderSetupSummary(m, s){
 function applySetup(){
   const m = getMatch(), s = getSet(); if(!m || !s) return false;
   if(s.usOrder.some(x=>x==null)){
-    toast("鎌ケ谷のサーブ順（6名）をすべて選んでください");
+    showError("セット設定が終わっていません。鎌ケ谷のサーブ順（6名）をすべて選んでください");
     return false;
   }
   s.setupDone = true;
   setupOpen = false;
+  actorSkip = false;
+  clearError();
   guideStep = deriveGuideStep();
   saveDB(); renderMatch();
   toast("第" + (curSetIdx+1) + "セットの設定を適用しました");
@@ -1234,12 +1275,14 @@ function actorSelectorHTML(m, s, st){
     return '<span class="anum">' + (prefix || "") + num + "</span>" +
       (nm ? '<span class="aname">' + esc(nm) + "</span>" : "");
   };
-  // 見出し（②バッジ＋「誰が」）は renderInputCol 側の step-head が担う。
+  // 見出し（②バッジ＋「誰が」＋案内文＋『不明』ボタン）は renderInputCol 側の step-head が担う。
   // ここでは選択中だけ、その内訳を補足行として出す。
   let h = "";
   if(selActor){
     const selName0 = selActor.team === "us" ? ((m.rosterNames || {})[String(selActor.num)] || "") : "";
     h = '<div class="col-label actor-sel-note">選択中： ' + (selActor.team === "us" ? "鎌ケ谷" : opp) + " No." + selActor.num + (selName0 ? " " + esc(selName0) : "") + "（再タップで解除）</div>";
+  } else if(actorSkip){
+    h = '<div class="col-label actor-sel-note">選択中： 不明（選手なしで摘要を付けます）</div>';
   }
   h += '<div class="actor-team">鎌ケ谷</div><div class="actor-btns">';
   st.positions.us.forEach(n=>{ if(n != null) h += btn("us", n, "", usInner(n, "")); });
@@ -1254,19 +1297,19 @@ function actorSelectorHTML(m, s, st){
     h += "</div>";
   } else {
     const selThem = selActor && selActor.team === "them";
-    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + dis + ">" +
+    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + (dis || (!s.finished && deriveGuideStep() === 1) ? " disabled" : "") + ">" +
       '<button class="actor-btn' + (selThem ? " on" : "") + '" id="btn-actor-them"' + dis + ">" + (selThem ? "解除" : "選択") + "</button></div>";
   }
   return h;
 }
 /* フローガイドの行き先を現在の状態から決め直す（undo・セット切替・試合を開く・設定適用などのときに使う）。
-   直前ラリーに摘要がまだ無ければ、そのラリーへの入力が続く：選手選択中なら③摘要、未選択なら②誰が。
+   直前ラリーに摘要がまだ無ければ、そのラリーへの入力が続く：選手選択中か『不明』を押していれば③摘要、どちらも無ければ②誰が。
    直前ラリーに摘要がある／ラリーが無い／セット終了済みなら、次のラリーの起点＝①得点。 */
 function deriveGuideStep(){
   const s = getSet();
   if(!s || s.finished) return 1;
   const r = lastRallyEntry(s);
-  if(r && !r.note) return selActor ? 3 : 2;
+  if(r && !r.note) return (selActor || actorSkip) ? 3 : 2;
   return 1;
 }
 function renderInputCol(m, s, st){
@@ -1288,21 +1331,27 @@ function renderInputCol(m, s, st){
   }
   // フローガイドの正規化：選択状態と矛盾する行き先は、現在の状態から決め直す
   // （例：交代で選択中の選手がコートを離れて選択が解除された場合）
-  if(guideStep === 3 && !selActor) guideStep = deriveGuideStep();
-  else if(guideStep === 2 && selActor) guideStep = 3;
+  if(guideStep === 3 && !selActor && !actorSkip) guideStep = deriveGuideStep();
+  else if(guideStep === 2 && (selActor || actorSkip)) guideStep = 3;
   const gz = s.finished ? 0 : guideStep;
-  const zoneAttr = n=> ' class="step-zone' + (gz === n ? " guide" : "") + '" data-zone="' + n + '"';
+  const zoneAttr = n=> ' class="step-zone' + (gz === n ? " guide" : "") +
+    ((n === 2 && gz === 1) || (n === 3 && (gz === 1 || gz === 2)) ? " locked" : "") + '" data-zone="' + n + '"';
   let h = "";
   h += "<div" + zoneAttr(1) + ">" +
-    '<div class="step-head"><span class="step-badge">1</span>得点</div>' +
+    '<div class="step-head"><span class="step-badge">1</span>得点<span class="step-sub">' + (gz === 1 ? "得点が入ったらタップ" : "次の得点もここから") + '</span></div>' +
     '<div class="pt-btns">' +
     '<button class="pt-btn us" id="pt-us"' + dis + ">鎌ケ谷 +1</button>" +
     '<button class="pt-btn them" id="pt-them"' + dis + ">" + esc(opp) + " +1</button></div></div>";
+  const sub2 = gz === 1 ? "🔒 ①得点のあとで選べます" :
+    (gz === 2 ? "プレーした選手をタップ" : (selActor ? "選択中です（変更できます）" : "『不明』で進みました"));
   h += "<div" + zoneAttr(2) + ">" +
-    '<div class="step-head"><span class="step-badge">2</span>誰が（任意）<span class="step-sub">摘要に「内容 No.○」を付けます</span></div>' +
+    '<div class="step-head"><span class="step-badge">2</span>誰が<span class="step-sub">' + sub2 + '</span>' +
+    '<button class="unknown-btn' + (actorSkip ? " on" : "") + '" id="btn-actor-unknown"' + dis + ">不明</button></div>" +
     actorSelectorHTML(m, s, st) + "</div>";
+  const sub3 = gz === 1 ? "🔒 ①②のあとで選べます" :
+    (gz === 2 ? "🔒 ②『誰が』のあとで選べます" : "内容をタップ（なければ次の得点へ）");
   h += "<div" + zoneAttr(3) + ">" +
-    '<div class="step-head"><span class="step-badge">3</span>摘要</div>' +
+    '<div class="step-head"><span class="step-badge">3</span>摘要<span class="step-sub">' + sub3 + '</span></div>' +
     '<div class="note-group-label pt">得点</div><div class="chip-grid">';
   QUICK_NOTES_POINT.forEach(q=>{ h += '<button class="chip pt" data-note="' + esc(q) + '"' + dis + ">" + esc(q) + "</button>"; });
   h += '</div><div class="note-group-label ms">ミス</div><div class="chip-grid">';
@@ -1326,32 +1375,49 @@ function renderInputCol(m, s, st){
   col.innerHTML = h;
 
   const pus = document.getElementById("pt-us"), pth = document.getElementById("pt-them");
-  if(pus) pus.onclick = ()=> addPoint("us");
-  if(pth) pth.onclick = ()=> addPoint("them");
+  if(pus) pus.onclick = ()=>{ clearError(); actorSkip = false; addPoint("us"); };
+  if(pth) pth.onclick = ()=>{ clearError(); actorSkip = false; addPoint("them"); };
   const but = document.getElementById("btn-util-toggle");
   if(but) but.onclick = ()=>{ utilOpen = !utilOpen; renderMatch(); };
   col.querySelectorAll("[data-actor]").forEach(b=> b.onclick = ()=>{
+    if(flowStepNow() === 1){ showError("②『誰が』は、①得点を押したあとで選びます。まず得点ボタンを押してください"); return; }
     const parts = b.getAttribute("data-actor").split(":");
     const a = { team: parts[0], num: Number(parts[1]) };
     selActor = (selActor && selActor.team === a.team && selActor.num === a.num) ? null : a;
+    if(selActor) actorSkip = false;
+    clearError();
     guideStep = deriveGuideStep();
     renderMatch();
   });
   const bat = document.getElementById("btn-actor-them");
   if(bat) bat.onclick = ()=>{
+    if(flowStepNow() === 1){ showError("②『誰が』は、①得点を押したあとで選びます。まず得点ボタンを押してください"); return; }
     if(selActor && selActor.team === "them"){ selActor = null; guideStep = deriveGuideStep(); renderMatch(); return; }
     const inp = document.getElementById("actor-them-num");
     const v = inp ? Number(inp.value) : 0;
-    if(!v){ toast("相手の番号を入力してください"); return; }
+    if(!v){ showError("相手の番号を入力してから『選択』を押してください"); return; }
     selActor = { team: "them", num: v };
+    actorSkip = false;
+    clearError();
     guideStep = deriveGuideStep();
     renderMatch();
   };
-  col.querySelectorAll("[data-note]").forEach(b=> b.onclick = ()=> applyNote(b.getAttribute("data-note")));
+  const buk = document.getElementById("btn-actor-unknown");
+  if(buk) buk.onclick = ()=>{
+    if(flowStepNow() === 1){ showError("②『誰が』は、①得点を押したあとで選びます。まず得点ボタンを押してください"); return; }
+    selActor = null;
+    actorSkip = true;
+    clearError();
+    guideStep = deriveGuideStep();
+    renderMatch();
+  };
+  col.querySelectorAll("[data-note]").forEach(b=> b.onclick = ()=> uiApplyNote(b.getAttribute("data-note")));
   const bm = document.getElementById("btn-memo");
   if(bm) bm.onclick = ()=>{
     const inp = document.getElementById("memo-input");
     const v = inp.value.trim(); if(!v) return;
+    if(!lastRallyEntry(s)){ showError("まだ得点が記録されていません。メモは直前のラリーに付くので、①まず得点を記録してください"); return; }
+    clearError();
     applyNote(v, null); inp.value = "";
   };
   const bsu = document.getElementById("btn-sub-us"); if(bsu) bsu.onclick = ()=> openSubModal("us");
@@ -1399,6 +1465,33 @@ function lastRallyEntry(s){
   for(let i = s.log.length - 1; i >= 0; i--){ if(s.log[i].kind === "rally") return s.log[i]; }
   return null;
 }
+/* 現在の入力手順（①得点→②誰が→③摘要）の段階を返す。セット終了時は 0。 */
+function flowStepNow(){
+  const s = getSet();
+  if(!s || s.finished) return 0;
+  return deriveGuideStep();
+}
+/* 摘要チップのUI入口：手順が違う場合は記録せず、エラーで止める。
+   ①得点が無い／直前ラリーに摘要済み／②『誰が』未選択（『不明』も未押下）のいずれもここで弾く。 */
+function uiApplyNote(text){
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished) return;
+  const r = lastRallyEntry(s);
+  if(!r){
+    showError("まだ得点が記録されていません。①まず『" + TEAM_US + " +1』か『" + (m.opponent || "相手") + " +1』を押してください");
+    return;
+  }
+  if(r.note){
+    showError("そのラリーの摘要は記録済みです。次の得点が入ったら、①得点 → ②誰が → ③摘要 の順で入力してください");
+    return;
+  }
+  if(!selActor && !actorSkip){
+    showError("②『誰が』がまだ選ばれていません。そのプレーをした選手を押してください。分からないときは『不明』を押してください");
+    return;
+  }
+  clearError();
+  applyNote(text);
+  actorSkip = false;
+}
 /* 摘要を直前ラリーに付ける。actor 省略時は現在の「誰が」選択を使い、
    {team, num} を渡すと「内容 No.○」として記録し actors にも構造化保持する。
    null を渡すと選手なし（メモ用）。 */
@@ -1427,8 +1520,10 @@ function addTimeout(team){
 }
 function undoLast(){
   const s = getSet(); if(!s || s.log.length === 0) return;
-  if(s.finished){ toast("終了したセットは「終了を取り消す」から再開してください"); return; }
+  if(s.finished){ showError("終了したセットは直せません。直す場合は『終了を取り消す』を押してください"); return; }
   const removed = s.log.pop();
+  actorSkip = false;
+  clearError();
   guideStep = deriveGuideStep();
   saveDB(); clearServeFlash(); renderMatch();
   toast(removed.kind === "rally" ? "直前のラリーを取り消しました" : "直前の記録を取り消しました");
@@ -1873,7 +1968,7 @@ function init(){
   document.getElementById("btn-new-match").onclick = ()=>{
     const m = newMatchObj();
     DB.matches.push(m); saveDB();
-    curMatchId = m.id; curSetIdx = 0; setupOpen = true; guideStep = 1;
+    curMatchId = m.id; curSetIdx = 0; setupOpen = true; selActor = null; actorSkip = false; guideStep = 1;
     renderMatch();
     openHeaderEdit();
   };
@@ -1919,6 +2014,8 @@ window.VSB = {
   getMatchView: ()=> matchView,
   getStatsSetIdx: ()=> statsSetIdx,
   getSelActor: ()=> selActor,
+  getActorSkip: ()=> actorSkip,
+  showError, clearError, uiApplyNote, flowStepNow,
   getGuideStep: ()=> guideStep, deriveGuideStep,
   setSelActor: a=>{ selActor = a; },
   setCurSetIdx: i=>{ curSetIdx = i; },
