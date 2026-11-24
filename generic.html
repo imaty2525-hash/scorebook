@@ -42,7 +42,7 @@ button{font-family:inherit; cursor:pointer; touch-action:manipulation; user-sele
 /* 操作系エリアは長押し選択・ダブルタップズームを抑止（入力欄だけはテキスト選択可） */
 .match-topbar,.set-tabs,.score-strip,.input-col,.side-col{user-select:none; -webkit-user-select:none;}
 input,select,textarea{user-select:text; -webkit-user-select:text;}
-input,select,textarea{font-family:inherit; font-size:16px; color:var(--txt);}
+input,select,textarea{font-family:inherit; font-size:16px; color:var(--txt); background:var(--input-bg);}
 h1,h2,h3{margin:0;}
 .hidden{display:none !important;}
 /* ホームは専用のスクロール領域を持つ（body自体は固定されているため） */
@@ -155,9 +155,9 @@ h1,h2,h3{margin:0;}
 .step-zone.locked .unknown-btn{ background:#edf1f7; color:#8593ad; }
 /* 「誰が」ゾーン見出し右の『不明』ボタン（選手が分からないときに手順②を進める） */
 .unknown-btn{
-  margin-left:auto; flex:none; height:24px; padding:0 12px; border-radius:999px;
+  margin-left:auto; flex:none; min-height:36px; padding:4px 14px; border-radius:999px;
   border:1px solid var(--line); background:#fff; color:var(--sub);
-  font-size:12px; font-weight:800; cursor:pointer;
+  font-size:13px; font-weight:800; cursor:pointer;
 }
 .unknown-btn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
 .setend-banner{
@@ -224,7 +224,7 @@ table.book tr.win-us td.c-point.us{background:var(--good-bg);}
 .comment-box textarea{flex:1; height:34px; min-height:34px; border:1px solid var(--line); border-radius:10px; padding:6px 8px; background:var(--input-bg); resize:none;}
 
 /* ===== 入力列 ===== */
-.input-col{width:336px; flex:none; display:flex; flex-direction:column; gap:4px; overflow:hidden; padding-bottom:1px;}
+.input-col{width:336px; flex:none; display:flex; flex-direction:column; gap:2px; overflow:hidden; padding-bottom:0;}
 .pt-btns{display:flex; gap:8px;}
 .pt-btn{
   flex:1; min-height:72px; border-radius:14px; font-size:22px; font-weight:900; color:#fff; border:2px solid;
@@ -247,11 +247,11 @@ table.book tr.win-us td.c-point.us{background:var(--good-bg);}
   display:flex; align-items:center; justify-content:center; text-align:center;
   font-size:13px; line-height:1.15;
 }
-.note-group-label{font-size:12px; font-weight:900; margin:0 0 2px; line-height:1.25; white-space:nowrap;}
+.note-group-label{font-size:12px; font-weight:900; margin:0; line-height:1.25; white-space:nowrap;}
 /* ===== 入力フローガイド（①得点→②誰が→③摘要：順番バッジ＋次のゾーンの発光） =====
    発光は box-shadow のアニメーションのみで、レイアウトは一切ずらさない。
    手順が違うゾーンはロックされ（薄色表示）、押しても記録されずエラーが表示される。 */
-.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:2px;}
+.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:0;}
 .step-badge{
   flex:none; width:17px; height:17px; border-radius:50%; background:var(--sub); color:#fff;
   font-size:11px; font-weight:900; line-height:1;
@@ -585,7 +585,8 @@ table.book tr.latest td:first-child{box-shadow:inset 4px 0 0 #d97706;}
 .libero-chip{background:#e3ecfd;border-color:var(--navy);color:var(--navy);}
 .libero-label{color:var(--navy);}
 /* セット設定の要約・モーダル・統計 */
-.setup-summary{background:#d8f7e3;}
+.setup-summary{background:var(--sel-bg);border-color:#93c5fd;}
+.setup-summary .ss-txt{color:var(--navy);}
 .modal{border-top:5px solid var(--gold);}
 .stats-card h3{color:var(--navy);}
 .btn.view-on{background:var(--navy);border-color:var(--navy);}
@@ -643,6 +644,8 @@ html[data-theme="dark"] .chip.ms{background:#3d1520;}
 html[data-theme="dark"] .libero-chip{background:#22314f; color:#cfe0fa;}
 html[data-theme="dark"] .srv-badge{background:#22314f; color:#cfe0fa;}
 html[data-theme="dark"] .setup-panel{background:#1d2c4e; border-color:#35497a;}
+html[data-theme="dark"] .setup-summary{background:#1d2c4e;border-color:#46639f;}
+html[data-theme="dark"] .setup-summary .ss-txt{color:#93c5fd;}
 html[data-theme="dark"] .setup-panel select, html[data-theme="dark"] .setup-panel input{border-color:#46639f;}
 html[data-theme="dark"] .modal{background:var(--card);}
 html[data-theme="dark"] .unknown-btn{background:#22314f; color:#cfe0fa;}
@@ -1078,9 +1081,9 @@ function renderHome(){
       '<button class="btn primary" data-open="' + m.id + '">開く</button>' +
       '<button class="btn danger" data-del="' + m.id + '">削除</button></div>' +
       '<div class="mc-meta">' + esc(m.date || "") + (m.place ? " ・ " + esc(m.place) : "") + (m.opponent ? " ・ vs " + esc(m.opponent) : "") + '</div>' +
-      '<div class="mc-score">セットカウント ' + usName() + ' ' + w.us + " － " + w.them + " " + esc(m.opponent || "相手") +
+      '<div class="mc-score">セットカウント ' + esc(usName()) + ' ' + w.us + " － " + w.them + " " + esc(m.opponent || "相手") +
       (setScores ? '<span style="font-size:13px;color:var(--sub);font-weight:600;">　(' + esc(setScores) + ")</span>" : "") +
-      (matchDecided(m) ? '<span style="font-size:13px;font-weight:800;">　🏆 ' + (matchDecided(m) === "us" ? usName() : esc(m.opponent || "相手")) + "の勝利</span>" : "") + "</div>" +
+      (matchDecided(m) ? '<span style="font-size:13px;font-weight:800;">　🏆 ' + (matchDecided(m) === "us" ? esc(usName()) : esc(m.opponent || "相手")) + "の勝利</span>" : "") + "</div>" +
       "</div>";
   }).join("");
   list.querySelectorAll("[data-open]").forEach(b=> b.onclick = ()=> openMatch(b.getAttribute("data-open")));
@@ -1179,7 +1182,7 @@ function renderScoreStrip(m, s, st){
   mn.textContent = adj.length ? "※ " + adj.join(" / ") : "";
   // 「1つ戻す」はスコア帯に常時表示。記録が無いときだけ無効化する
   const bu = document.getElementById("btn-undo");
-  if(bu) bu.disabled = (s.log.length === 0);
+  if(bu) bu.disabled = (s.log.length === 0 || m.status === "finished");
   const sx = document.getElementById("streak-inline");
   if(sx){
     let run = 0, runTeam = null;
@@ -1200,14 +1203,17 @@ function renderScoreStrip(m, s, st){
 function renderSetEnd(m, s, st){
   const h = document.getElementById("setend-holder");
   let html = "";
+  if(m.status === "finished"){
+    html += '<div class="setend-banner">🔒 この試合は終了しています（記録を変更するには右上の「試合を再開」を押してください）</div>';
+  }
   const dec = matchDecided(m);
   if(dec){
     const w = setsWon(m);
-    html += '<div class="setend-banner">🏆 試合結果： ' + usName() + ' ' + w.us + " － " + w.them + " " + esc(m.opponent || "相手") +
-      "（" + (dec === "us" ? usName() : esc(m.opponent || "相手")) + "の勝利）</div>";
+    html += '<div class="setend-banner">🏆 試合結果： ' + esc(usName()) + ' ' + w.us + " － " + w.them + " " + esc(m.opponent || "相手") +
+      "（" + (dec === "us" ? esc(usName()) : esc(m.opponent || "相手")) + "の勝利）</div>";
   }
   if(s.finished){
-    html += '<div class="setend-banner">第' + (curSetIdx+1) + "セット終了： " + usName() + " " + s.finalUs + " － " + s.finalThem + " " + esc(m.opponent || "相手") +
+    html += '<div class="setend-banner">第' + (curSetIdx+1) + "セット終了： " + esc(usName()) + " " + s.finalUs + " － " + s.finalThem + " " + esc(m.opponent || "相手") +
       '<button class="btn" id="btn-reopen-set">終了を取り消す</button></div>';
     h.innerHTML = html;
     document.getElementById("btn-reopen-set").onclick = ()=>{
@@ -1254,7 +1260,7 @@ function renderSetupSummary(m, s){
     extra += "　" + esc(m.opponent || "相手") + "サーブ順： " + s.themOrder.map(n=> n==null ? "―" : n).join(" → ");
   holder.innerHTML =
     '<div class="setup-summary">' +
-      '<span class="ss-txt">✓ 第' + (curSetIdx+1) + "セット設定済み（先攻：" + (s.firstServe === "us" ? usName() : esc(m.opponent || "相手")) + "）</span>" +
+      '<span class="ss-txt">✓ 第' + (curSetIdx+1) + "セット設定済み（先攻：" + (s.firstServe === "us" ? esc(usName()) : esc(m.opponent || "相手")) + "）</span>" +
       '<span class="ss-order">サーブ順： ' + order + extra + "</span>" +
       '<button class="btn" id="btn-open-setup">設定を開く</button>' +
     "</div>";
@@ -1265,6 +1271,15 @@ function applySetup(){
   const m = getMatch(), s = getSet(); if(!m || !s) return false;
   if(s.usOrder.some(x=>x==null)){
     showError("セット設定が終わっていません。" + usName() + "のサーブ順（6名）をすべて選んでください");
+    return false;
+  }
+  if(new Set(s.usOrder).size !== 6){
+    showError(usName() + "のサーブ順に同じ背番号が重複しています。6名それぞれ別の選手を選んでください");
+    return false;
+  }
+  const libDup = (s.liberos || []).find(n => s.usOrder.includes(n));
+  if(libDup != null){
+    showError("No." + libDup + " はサーブ順とリベロの両方に選ばれています。どちらかを変更してください");
     return false;
   }
   s.setupDone = true;
@@ -1310,12 +1325,12 @@ function renderSetupPanel(m, s){
     '<div class="setup-panel"><h3>第' + (curSetIdx+1) + 'セット設定</h3>' +
     '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">' +
       '<div><div style="font-size:13px;font-weight:700;color:var(--sub);margin-bottom:4px;">先攻（最初のサーブ）</div>' +
-      '<span class="seg"><button data-first="us" class="' + (s.firstServe==="us"?"on":"") + '">' + usName() + '</button><button data-first="them" class="' + (s.firstServe==="them"?"on":"") + '">' + esc(m.opponent || "相手") + "</button></span></div>" +
+      '<span class="seg"><button data-first="us" class="' + (s.firstServe==="us"?"on":"") + '">' + esc(usName()) + '</button><button data-first="them" class="' + (s.firstServe==="them"?"on":"") + '">' + esc(m.opponent || "相手") + "</button></span></div>" +
       (curSetIdx > 0 ? '<button class="btn" id="btn-copy-order">前セットのサーブ順をコピー</button>' : "") +
       (hasRallies ? '<span style="font-size:12px;color:var(--warn-tx);font-weight:700;">※ 記録が始まったセットのサーブ順変更は表示に影響します</span>' : "") +
     "</div>" +
     '<div class="setup-grid">' +
-      '<div><div class="sg-title">' + usName() + ' サーブ順（スタメン6名）</div>' + orderSelects("us", s.usOrder) +
+      '<div><div class="sg-title">' + esc(usName()) + ' サーブ順（スタメン6名）</div>' + orderSelects("us", s.usOrder) +
         '<div class="sg-title" style="margin-top:10px;">リベロ（最大2名・任意）</div>' + libOpts + "</div>" +
       '<div><div class="sg-title">' + esc(m.opponent || "相手") + ' サーブ順（任意・番号入力）</div>' + orderSelects("them", s.themOrder) +
         '<div style="font-size:12px;color:var(--sub);margin-top:6px;">未入力でも記録できます（サーバーは「相手」と表示）。</div></div>' +
@@ -1417,7 +1432,7 @@ function fitBook(){
 function renderBook(m, s, st){
   const opp = m.opponent || "相手";
   let h = "<thead>" +
-    '<tr class="team-head"><th colspan="3" class="th-us">Team ' + usName() + '</th><th colspan="3" class="th-them">Team ' + esc(opp) + "</th></tr>" +
+    '<tr class="team-head"><th colspan="3" class="th-us">Team ' + esc(usName()) + '</th><th colspan="3" class="th-them">Team ' + esc(opp) + "</th></tr>" +
     "<tr><th class='c-server'>サーバー</th><th class='c-point'>得点</th><th>摘要</th>" +
     "<th class='c-server'>サーバー</th><th class='c-point'>得点</th><th>摘要</th></tr></thead><tbody>";
   // 最新の得点セルをハイライトするため、最後のラリー行の位置を先に求める
@@ -1465,7 +1480,7 @@ function renderBook(m, s, st){
     }
   });
   if(s.finished){
-    h += '<tr class="final-row"><td colspan="6">最終スコア　' + usName() + ' ' + s.finalUs + " － " + s.finalThem + " " + esc(opp) + "</td></tr>";
+    h += '<tr class="final-row"><td colspan="6">最終スコア　' + esc(usName()) + ' ' + s.finalUs + " － " + s.finalThem + " " + esc(opp) + "</td></tr>";
   }
   h += "</tbody>";
   document.getElementById("book-table").innerHTML = h;
@@ -1490,7 +1505,7 @@ function courtHTML(m, s, st, team, mini){
   };
   // 上段＝前衛（ネット側）4・3・2、下段＝後衛 5・6・1、間に3mライン
   return '<div class="court' + (mini ? " mini" : "") + '">' +
-    '<div class="court-title">' + (team === "us" ? usName() + " コート" : esc(m.opponent || "相手") + " コート") + "</div>" +
+    '<div class="court-title">' + (team === "us" ? esc(usName()) + " コート" : esc(m.opponent || "相手") + " コート") + "</div>" +
     '<div class="court-net"></div>' +
     '<div class="court-grid">' + cell(4) + cell(3) + cell(2) + "</div>" +
     '<div class="court-3m"></div>' +
@@ -1515,7 +1530,8 @@ const QUICK_NOTES_POINT = ["サービスエース","スパイク","フェイン�
 const QUICK_NOTES_MISS = ["スパイクミス","サーブミス","レセプションミス","ディグミス","ドリブル","その他ミス"];
 /* 「誰が」セレクタ：コート上の6人＋リベロ（相手はサーブ順未登録なら番号入力） */
 function actorSelectorHTML(m, s, st){
-  const dis = s.finished ? " disabled" : "";
+  const locked = s.finished || m.status === "finished";
+  const dis = locked ? " disabled" : "";
   const opp = m.opponent || "相手";
   const btn = (team, num, extraCls, inner)=>{
     const on = selActor && selActor.team === team && selActor.num === num;
@@ -1532,11 +1548,11 @@ function actorSelectorHTML(m, s, st){
   let h = "";
   if(selActor){
     const selName0 = selActor.team === "us" ? ((m.rosterNames || {})[String(selActor.num)] || "") : "";
-    h = '<div class="col-label actor-sel-note">選択中： ' + (selActor.team === "us" ? usName() : opp) + " No." + selActor.num + (selName0 ? " " + esc(selName0) : "") + "（再タップで解除）</div>";
+    h = '<div class="col-label actor-sel-note">選択中： ' + esc(selActor.team === "us" ? usName() : opp) + " No." + selActor.num + (selName0 ? " " + esc(selName0) : "") + "（再タップで解除）</div>";
   } else if(actorSkip){
     h = '<div class="col-label actor-sel-note">選択中： 不明（選手なしで摘要を付けます）</div>';
   }
-  h += '<div class="actor-team">' + usName() + '</div><div class="actor-btns">';
+  h += '<div class="actor-team">' + esc(usName()) + '</div><div class="actor-btns">';
   st.positions.us.forEach(n=>{ if(n != null) h += btn("us", n, "", usInner(n, "")); });
   (s.liberos||[]).forEach(n=>{ h += btn("us", n, " lib", usInner(n, "L")); });
   if(st.positions.us.every(n=>n==null) && (s.liberos||[]).length === 0)
@@ -1549,7 +1565,7 @@ function actorSelectorHTML(m, s, st){
     h += "</div>";
   } else {
     const selThem = selActor && selActor.team === "them";
-    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + (dis || (!s.finished && deriveGuideStep() === 1) ? " disabled" : "") + ">" +
+    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + (dis || (!locked && deriveGuideStep() === 1) ? " disabled" : "") + ">" +
       '<button class="actor-btn' + (selThem ? " on" : "") + '" id="btn-actor-them"' + dis + ">" + (selThem ? "解除" : "選択") + "</button></div>";
   }
   return h;
@@ -1571,7 +1587,8 @@ function renderInputCol(m, s, st){
     col.innerHTML = '<div class="setup-locked">⚙ まず上の「セット設定」でサーブ順を入力し、「✓ この設定を適用する」を押してください。適用すると得点・摘要の入力が使えます。</div>';
     return;
   }
-  const dis = s.finished ? " disabled" : "";
+  const locked = s.finished || m.status === "finished";
+  const dis = locked ? " disabled" : "";
   const opp = m.opponent || "相手";
   // 選択中の選手が交代などで対象から外れていたら選択を解除する
   if(selActor){
@@ -1585,14 +1602,14 @@ function renderInputCol(m, s, st){
   // （例：交代で選択中の選手がコートを離れて選択が解除された場合）
   if(guideStep === 3 && !selActor && !actorSkip) guideStep = deriveGuideStep();
   else if(guideStep === 2 && (selActor || actorSkip)) guideStep = 3;
-  const gz = s.finished ? 0 : guideStep;
+  const gz = locked ? 0 : guideStep;
   const zoneAttr = n=> ' class="step-zone' + (gz === n ? " guide" : "") +
     ((n === 2 && gz === 1) || (n === 3 && (gz === 1 || gz === 2)) ? " locked" : "") + '" data-zone="' + n + '"';
   let h = "";
   h += "<div" + zoneAttr(1) + ">" +
     '<div class="step-head"><span class="step-badge">1</span>得点<span class="step-sub">' + (gz === 1 ? "得点が入ったらタップ" : "次の得点もここから") + '</span></div>' +
     '<div class="pt-btns">' +
-    '<button class="pt-btn us" id="pt-us"' + dis + ">" + usName() + " +1</button>" +
+    '<button class="pt-btn us" id="pt-us"' + dis + ">" + esc(usName()) + " +1</button>" +
     '<button class="pt-btn them" id="pt-them"' + dis + ">" + esc(opp) + " +1</button></div></div>";
   const sub2 = gz === 1 ? "🔒 ①得点のあとで選べます" :
     (gz === 2 ? "プレーした選手をタップ" : (selActor ? "選択中です（変更できます）" : "『不明』で進みました"));
@@ -1614,14 +1631,14 @@ function renderInputCol(m, s, st){
   h += '<div class="util-zone' + (utilOpen ? "" : " hidden") + '" id="util-zone">';
   h += '<div class="memo-row"><input type="text" id="memo-input" placeholder="メモ（自由入力）"' + dis + '><button class="chip" id="btn-memo"' + dis + ">メモ追加</button></div>";
   h += '<div class="col-label">交代・タイムアウト</div><div class="util-btns">' +
-    '<button class="ubtn" id="btn-sub-us"' + dis + ">交代（" + usName() + "）</button>" +
+    '<button class="ubtn" id="btn-sub-us"' + dis + ">交代（" + esc(usName()) + "）</button>" +
     '<button class="ubtn" id="btn-sub-them"' + dis + ">交代（" + esc(opp) + "）</button>" +
-    '<button class="ubtn" id="btn-to-us"' + (s.finished || st.timeouts.us >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + usName() + "（残" + (TIMEOUT_MAX - st.timeouts.us) + "）</button>" +
-    '<button class="ubtn" id="btn-to-them"' + (s.finished || st.timeouts.them >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + esc(opp) + "（残" + (TIMEOUT_MAX - st.timeouts.them) + "）</button></div>";
+    '<button class="ubtn" id="btn-to-us"' + (locked || st.timeouts.us >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + esc(usName()) + "（残" + (TIMEOUT_MAX - st.timeouts.us) + "）</button>" +
+    '<button class="ubtn" id="btn-to-them"' + (locked || st.timeouts.them >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + esc(opp) + "（残" + (TIMEOUT_MAX - st.timeouts.them) + "）</button></div>";
   h += '<div class="col-label">タイマー</div><div class="util-btns">' +
     '<button class="ubtn wide" id="btn-timer-open">⏱ タイマー（セット間3分／TO30秒）</button></div>';
   h += '<div class="col-label">修正</div><div class="util-btns">' +
-    '<button class="ubtn wide" id="btn-finish-set2"' + (s.finished ? " disabled" : "") + ">セット終了</button></div>";
+    '<button class="ubtn wide" id="btn-finish-set2"' + (locked ? " disabled" : "") + ">セット終了</button></div>";
   h += '<div class="manual-row"><span style="font-size:13px;font-weight:700;color:var(--sub);">スコア手動修正</span>' +
     '<button class="mbtn" data-madj="us,1"' + dis + '>自+1</button><button class="mbtn" data-madj="us,-1"' + dis + '>自-1</button>' +
     '<button class="mbtn" data-madj="them,1"' + dis + '>相+1</button><button class="mbtn" data-madj="them,-1"' + dis + '>相-1</button></div>';
@@ -1681,23 +1698,19 @@ function renderInputCol(m, s, st){
   const btu = document.getElementById("btn-to-us"); if(btu) btu.onclick = ()=> addTimeout("us");
   const btt = document.getElementById("btn-to-them"); if(btt) btt.onclick = ()=> addTimeout("them");
   const bf = document.getElementById("btn-finish-set2"); if(bf) bf.onclick = ()=>{
-    if(setEndReached(s, replaySet(s), setTargetFor(m, curSetIdx)) || confirmManualFinish()) finishSet();
+    if(setEndReached(s, replaySet(s), setTargetFor(m, curSetIdx))){ finishSet(); return; }
+    confirmModal("まだセット終了の点数に達していません。このセットを終了しますか？", "終了する", finishSet);
   };
   col.querySelectorAll("[data-madj]").forEach(b=> b.onclick = ()=>{
     const parts = b.getAttribute("data-madj").split(",");
     manualAdjust(parts[0], Number(parts[1]));
   });
 }
-function confirmManualFinish(){
-  let ok = false;
-  // 同期確認が必要なため簡易モーダルではなく標準confirmを使う場面のみ
-  ok = window.confirm("まだセット終了の点数に達していません。このセットを終了しますか？");
-  return ok;
-}
+
 
 /* ---------- 記録アクション ---------- */
 function addPoint(winner){
-  const m = getMatch(), s = getSet(); if(!m || !s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const st = replaySet(s);
   const srv = st.currentServer();
   const serveBefore = st.serve;
@@ -1752,7 +1765,7 @@ function uiApplyNote(text){
    {team, num} を渡すと「内容 No.○」として記録し actors にも構造化保持する。
    null を渡すと選手なし（メモ用）。 */
 function applyNote(text, actor){
-  const s = getSet(); if(!s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const r = lastRallyEntry(s);
   if(!r){ toast("先に得点を記録してください"); return; }
   if(actor === undefined) actor = selActor;
@@ -1767,7 +1780,7 @@ function applyNote(text, actor){
   saveDB(); renderMatch();
 }
 function addTimeout(team){
-  const s = getSet(); if(!s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const st = replaySet(s);
   if(st.timeouts[team] >= TIMEOUT_MAX){ toast("タイムアウトは1セット" + TIMEOUT_MAX + "回までです"); return; }
   s.log.push({ kind: "timeout", team: team });
@@ -1775,8 +1788,20 @@ function addTimeout(team){
   toast("タイムアウトを記録しました");
 }
 function undoLast(){
-  const s = getSet(); if(!s || s.log.length === 0) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.log.length === 0) return;
+  if(m.status === "finished"){ showError("終了した試合は直せません。直す場合は『試合を再開』を押してください"); return; }
   if(s.finished){ showError("終了したセットは直せません。直す場合は『終了を取り消す』を押してください"); return; }
+  const last = s.log[s.log.length - 1];
+  if(last && last.kind === "rally" && last.note){
+    last.note = "";
+    last.actors = [];
+    actorSkip = false;
+    clearError();
+    guideStep = deriveGuideStep();
+    saveDB(); renderMatch();
+    toast("直前の摘要を取り消しました（得点は残っています）");
+    return;
+  }
   const removed = s.log.pop();
   actorSkip = false;
   clearError();
@@ -1956,7 +1981,7 @@ function scoreSeries(set){
   replaySet(set).rows.forEach(r=>{ if(r.kind === "rally") pts.push({ us: r.us, them: r.them }); });
   return pts;
 }
-function lineChartSVG(series){
+function lineChartSVG(series, oppName){
   if(series.length <= 1) return '<div class="stats-empty">このセットはまだ記録がありません。</div>';
   const W = 680, H = 250, pl = 36, pr = 16, pt = 16, pb = 28;
   const n = series.length - 1;
@@ -1966,8 +1991,8 @@ function lineChartSVG(series){
   const path = key => series.map((p,i)=> (i === 0 ? "M" : "L") + X(i).toFixed(1) + "," + Y(p[key]).toFixed(1)).join(" ");
   let g = "";
   [0, Math.round(maxS / 2), maxS].forEach(v=>{
-    g += '<line x1="' + pl + '" y1="' + Y(v) + '" x2="' + (W - pr) + '" y2="' + Y(v) + '" stroke="#d3ddee" stroke-width="1"/>' +
-      '<text x="' + (pl - 6) + '" y="' + (Y(v) + 4) + '" font-size="11" text-anchor="end" fill="#5a6b8c">' + v + "</text>";
+    g += '<line x1="' + pl + '" y1="' + Y(v) + '" x2="' + (W - pr) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-width="1"/>' +
+      '<text x="' + (pl - 6) + '" y="' + (Y(v) + 4) + '" font-size="11" text-anchor="end" fill="var(--sub)">' + v + "</text>";
   });
   const last = series[series.length - 1];
   return '<svg class="stats-svg" viewBox="0 0 ' + W + " " + H + '" role="img">' + g +
@@ -1975,9 +2000,9 @@ function lineChartSVG(series){
     '<path d="' + path("them") + '" fill="none" stroke="#ea580c" stroke-width="2.5"/>' +
     '<circle cx="' + X(n) + '" cy="' + Y(last.us) + '" r="4" fill="#2563eb"/>' +
     '<circle cx="' + X(n) + '" cy="' + Y(last.them) + '" r="4" fill="#ea580c"/>' +
-    '<text x="' + pl + '" y="' + (H - 8) + '" font-size="11" fill="#5a6b8c">ラリー数： ' + n + "</text>" +
+    '<text x="' + pl + '" y="' + (H - 8) + '" font-size="11" fill="var(--sub)">ラリー数： ' + n + "</text>" +
     '<text x="' + (W - pr) + '" y="' + (H - 8) + '" font-size="12" font-weight="700" text-anchor="end">' +
-      '<tspan fill="#2563eb">― ' + usName() + ' ' + last.us + '</tspan><tspan fill="#ea580c">　― 相手 ' + last.them + "</tspan></text>" +
+      '<tspan fill="#3b82f6">― ' + esc(usName()) + ' ' + last.us + '</tspan><tspan fill="#fb923c">　― ' + esc(oppName || "相手") + ' ' + last.them + "</tspan></text>" +
     "</svg>";
 }
 function barChartSVG(items, color){
@@ -1988,9 +2013,9 @@ function barChartSVG(items, color){
   items.forEach((it, i)=>{
     const y = i * rowH + 4;
     const bw = Math.round(barMax * it.value / max);
-    rows += '<text x="0" y="' + (y + 15) + '" font-size="13" fill="#16233d">' + esc(it.label) + "</text>" +
+    rows += '<text x="0" y="' + (y + 15) + '" font-size="13" fill="var(--txt)">' + esc(it.label) + "</text>" +
       '<rect x="' + labelW + '" y="' + y + '" width="' + (it.value > 0 ? Math.max(bw, 3) : 0) + '" height="17" rx="4" fill="' + color + '"/>' +
-      '<text x="' + (labelW + bw + 8) + '" y="' + (y + 15) + '" font-size="13" font-weight="700" fill="#16233d">' + it.value + "</text>";
+      '<text x="' + (labelW + bw + 8) + '" y="' + (y + 15) + '" font-size="13" font-weight="700" fill="var(--txt)">' + it.value + "</text>";
   });
   return '<svg class="stats-svg" viewBox="0 0 ' + W + " " + (items.length * rowH + 6) + '" role="img">' + rows + "</svg>";
 }
@@ -2023,26 +2048,26 @@ function renderStats(m){
   m.sets.forEach((s, i)=>{
     const st = replaySet(s);
     const sc = s.finished ? (s.finalUs + " － " + s.finalThem) : (st.dispUs + " － " + st.dispThem);
-    h += '<span class="stats-set-chip">第' + (i + 1) + "セット　" + usName() + " " + sc + " " + esc(opp) + (s.finished ? "（終了）" : "（進行中）") + "</span>";
+    h += '<span class="stats-set-chip">第' + (i + 1) + "セット　" + esc(usName()) + " " + sc + " " + esc(opp) + (s.finished ? "（終了）" : "（進行中）") + "</span>";
   });
-  h += '</div><div style="font-size:13px;color:var(--sub);font-weight:700;">セットカウント： ' + usName() + ' ' + w.us + " － " + w.them + " " + esc(opp) +
+  h += '</div><div style="font-size:13px;color:var(--sub);font-weight:700;">セットカウント： ' + esc(usName()) + ' ' + w.us + " － " + w.them + " " + esc(opp) +
     "（形式： " + esc(matchFormat(m).label) + "）" +
-    (matchDecided(m) ? "　🏆 " + (matchDecided(m) === "us" ? usName() : esc(opp)) + "の勝利" : "") + "</div></div>";
+    (matchDecided(m) ? "　🏆 " + (matchDecided(m) === "us" ? esc(usName()) : esc(opp)) + "の勝利" : "") + "</div></div>";
   // スコア推移
   const sNow = m.sets[statsSetIdx];
   h += '<div class="card stats-card"><h3>スコア推移（第' + (statsSetIdx + 1) + 'セット）</h3><div class="chips" style="margin-bottom:8px;">';
   m.sets.forEach((s, i)=>{
     h += '<button class="chip' + (i === statsSetIdx ? " view-on" : "") + '" data-statset="' + i + '">第' + (i + 1) + "セット</button>";
   });
-  h += "</div>" + lineChartSVG(scoreSeries(sNow));
+  h += "</div>" + lineChartSVG(scoreSeries(sNow), opp);
   if(sNow && (sNow.manualUs || sNow.manualThem))
     h += '<div style="font-size:12px;color:var(--sub);">※ スコア手動修正は推移グラフに反映されません</div>';
   h += "</div>";
   // 内訳（得点／ミス）
   h += '<div class="stats-grid">';
-  h += '<div class="card stats-card"><h3>得点の内訳（' + usName() + '）</h3>' +
+  h += '<div class="card stats-card"><h3>得点の内訳（' + esc(usName()) + '）</h3>' +
     barChartSVG(QUICK_NOTES_POINT.map(c=> ({ label: c, value: cs.point[c] })).concat([{ label: "未記録", value: cs.unrecorded }]), "#0da271") + "</div>";
-  h += '<div class="card stats-card"><h3>ミスの内訳（' + usName() + '）</h3>' +
+  h += '<div class="card stats-card"><h3>ミスの内訳（' + esc(usName()) + '）</h3>' +
     barChartSVG(QUICK_NOTES_MISS.map(c=> ({ label: c, value: cs.miss[c] })), "#e5484d") + "</div>";
   h += "</div>";
   // 選手別
@@ -2115,10 +2140,10 @@ function buildPrint(){
   let h = '<div class="p-title-row">' + LOGO_SVG + '<h1>バレーボール スコアブック</h1></div>';
   h += '<table class="p-head"><tr><td style="width:50%;">試合名： ' + esc(m.title) + "</td><td>日時： " + esc(m.date) + "</td></tr>" +
     "<tr><td>場所： " + esc(m.place) + " 体育館</td><td>開始： " + esc(m.startTime) + "　終了： " + esc(m.endTime) + "</td></tr>" +
-    "<tr><td>対戦： " + usName() + " vs " + esc(opp) + "</td><td>セットカウント： " + usName() + " " + w.us + " － " + w.them + " " + esc(opp) + "</td></tr>" +
+    "<tr><td>対戦： " + esc(usName()) + " vs " + esc(opp) + "</td><td>セットカウント： " + esc(usName()) + " " + w.us + " － " + w.them + " " + esc(opp) + "</td></tr>" +
     "<tr><td colspan='2'>今日の目標： " + esc(m.goal) + "</td></tr>" +
     "<tr><td colspan='2'>試合形式： " + esc(matchFormat(m).label) +
-    (matchDecided(m) ? "　／　試合結果： " + usName() + " " + w.us + " － " + w.them + " " + esc(opp) + "（" + (matchDecided(m) === "us" ? usName() : esc(opp)) + "の勝利）" : "") + "</td></tr></table>";
+    (matchDecided(m) ? "　／　試合結果： " + esc(usName()) + " " + w.us + " － " + w.them + " " + esc(opp) + "（" + (matchDecided(m) === "us" ? esc(usName()) : esc(opp)) + "の勝利）" : "") + "</td></tr></table>";
   // セット結果サマリー
   const pMaxSets = matchFormat(m).maxSets;
   h += "<h2>セット結果</h2><table><tr>";
@@ -2126,14 +2151,14 @@ function buildPrint(){
   h += "</tr><tr>";
   for(let i=0;i<pMaxSets;i++){
     const s = m.sets[i];
-    h += "<td>" + (s && s.finished ? (usName() + " " + s.finalUs + " － " + s.finalThem) : "―") + "</td>";
+    h += "<td>" + (s && s.finished ? (esc(usName()) + " " + s.finalUs + " － " + s.finalThem) : "―") + "</td>";
   }
   h += "</tr></table>";
   // 各セット
   m.sets.forEach((s, i)=>{
     const st = replaySet(s);
-    h += '<div class="p-set"><h2>第' + (i+1) + "セット" + (s.finished ? "（最終スコア： " + usName() + " " + s.finalUs + " － " + s.finalThem + " " + esc(opp) + "）" : "") + "</h2>";
-    h += "<table><tr><th colspan='3'>Team " + usName() + "</th><th colspan='3'>Team " + esc(opp) + "</th></tr>" +
+    h += '<div class="p-set"><h2>第' + (i+1) + "セット" + (s.finished ? "（最終スコア： " + esc(usName()) + " " + s.finalUs + " － " + s.finalThem + " " + esc(opp) + "）" : "") + "</h2>";
+    h += "<table><tr><th colspan='3'>Team " + esc(usName()) + "</th><th colspan='3'>Team " + esc(opp) + "</th></tr>" +
       "<tr><th>サーバー</th><th>得点</th><th>摘要</th><th>サーバー</th><th>得点</th><th>摘要</th></tr>";
     st.rows.forEach(r=>{
       if(r.kind === "rally"){

@@ -42,7 +42,7 @@ button{font-family:inherit; cursor:pointer; touch-action:manipulation; user-sele
 /* 操作系エリアは長押し選択・ダブルタップズームを抑止（入力欄だけはテキスト選択可） */
 .match-topbar,.set-tabs,.score-strip,.input-col,.side-col{user-select:none; -webkit-user-select:none;}
 input,select,textarea{user-select:text; -webkit-user-select:text;}
-input,select,textarea{font-family:inherit; font-size:16px; color:var(--txt);}
+input,select,textarea{font-family:inherit; font-size:16px; color:var(--txt); background:var(--input-bg);}
 h1,h2,h3{margin:0;}
 .hidden{display:none !important;}
 /* ホームは専用のスクロール領域を持つ（body自体は固定されているため） */
@@ -150,9 +150,9 @@ h1,h2,h3{margin:0;}
 .step-zone.locked .actor-btn.on{ background:#edf1f7; color:#8593ad; }
 /* 「誰が」ゾーン見出し右の『不明』ボタン（選手が分からないときに手順②を進める） */
 .unknown-btn{
-  margin-left:auto; flex:none; height:24px; padding:0 12px; border-radius:999px;
+  margin-left:auto; flex:none; min-height:36px; padding:4px 14px; border-radius:999px;
   border:1px solid var(--line); background:#fff; color:var(--sub);
-  font-size:12px; font-weight:800; cursor:pointer;
+  font-size:13px; font-weight:800; cursor:pointer;
 }
 .unknown-btn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
 .setend-banner{
@@ -219,7 +219,7 @@ table.book tr.win-us td.c-point.us{background:var(--good-bg);}
 .comment-box textarea{flex:1; height:34px; min-height:34px; border:1px solid var(--line); border-radius:10px; padding:6px 8px; background:var(--input-bg); resize:none;}
 
 /* ===== 入力列 ===== */
-.input-col{width:336px; flex:none; display:flex; flex-direction:column; gap:4px; overflow:hidden; padding-bottom:1px;}
+.input-col{width:336px; flex:none; display:flex; flex-direction:column; gap:2px; overflow:hidden; padding-bottom:0;}
 .pt-btns{display:flex; gap:8px;}
 .pt-btn{
   flex:1; min-height:72px; border-radius:14px; font-size:22px; font-weight:900; color:#fff; border:2px solid;
@@ -242,11 +242,11 @@ table.book tr.win-us td.c-point.us{background:var(--good-bg);}
   display:flex; align-items:center; justify-content:center; text-align:center;
   font-size:13px; line-height:1.15;
 }
-.note-group-label{font-size:12px; font-weight:900; margin:0 0 2px; line-height:1.25; white-space:nowrap;}
+.note-group-label{font-size:12px; font-weight:900; margin:0; line-height:1.25; white-space:nowrap;}
 /* ===== 入力フローガイド（①得点→②誰が→③摘要：順番バッジ＋次のゾーンの発光） =====
    発光は box-shadow のアニメーションのみで、レイアウトは一切ずらさない。
    手順が違うゾーンはロックされ（薄色表示）、押しても記録されずエラーが表示される。 */
-.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:1px;}
+.step-head{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--sub); line-height:1.25; margin-bottom:0;}
 .step-badge{
   flex:none; width:17px; height:17px; border-radius:50%; background:var(--sub); color:#fff;
   font-size:11px; font-weight:900; line-height:1;
@@ -581,7 +581,10 @@ table.book tr.latest td:first-child{box-shadow:inset 4px 0 0 #d97706;}
 .libero-chip{background:#e3ecfd;border-color:var(--navy);color:var(--navy);}
 .libero-label{color:var(--navy);}
 /* セット設定の要約・モーダル・統計 */
-.setup-summary{background:#d8f7e3;}
+.setup-summary{background:var(--sel-bg);border-color:#93c5fd;}
+.setup-summary .ss-txt{color:var(--navy);}
+html[data-theme="dark"] .setup-summary{background:#1d2c4e;border-color:#46639f;}
+html[data-theme="dark"] .setup-summary .ss-txt{color:#93c5fd;}
 .modal{border-top:5px solid var(--gold);}
 .stats-card h3{color:var(--navy);}
 .btn.view-on{background:var(--navy);border-color:var(--navy);}
@@ -1145,7 +1148,7 @@ function renderScoreStrip(m, s, st){
   mn.textContent = adj.length ? "※ " + adj.join(" / ") : "";
   // 「1つ戻す」はスコア帯に常時表示。記録が無いときだけ無効化する
   const bu = document.getElementById("btn-undo");
-  if(bu) bu.disabled = (s.log.length === 0);
+  if(bu) bu.disabled = (s.log.length === 0 || m.status === "finished");
   const sx = document.getElementById("streak-inline");
   if(sx){
     let run = 0, runTeam = null;
@@ -1166,6 +1169,9 @@ function renderScoreStrip(m, s, st){
 function renderSetEnd(m, s, st){
   const h = document.getElementById("setend-holder");
   let html = "";
+  if(m.status === "finished"){
+    html += '<div class="setend-banner">🔒 この試合は終了しています（記録を変更するには右上の「試合を再開」を押してください）</div>';
+  }
   const dec = matchDecided(m);
   if(dec){
     const w = setsWon(m);
@@ -1231,6 +1237,15 @@ function applySetup(){
   const m = getMatch(), s = getSet(); if(!m || !s) return false;
   if(s.usOrder.some(x=>x==null)){
     showError("セット設定が終わっていません。鎌ケ谷のサーブ順（6名）をすべて選んでください");
+    return false;
+  }
+  if(new Set(s.usOrder).size !== 6){
+    showError("鎌ケ谷のサーブ順に同じ背番号が重複しています。6名それぞれ別の選手を選んでください");
+    return false;
+  }
+  const libDup = (s.liberos || []).find(n => s.usOrder.includes(n));
+  if(libDup != null){
+    showError("No." + libDup + " はサーブ順とリベロの両方に選ばれています。どちらかを変更してください");
     return false;
   }
   s.setupDone = true;
@@ -1481,7 +1496,8 @@ const QUICK_NOTES_POINT = ["サービスエース","スパイク","フェイン�
 const QUICK_NOTES_MISS = ["スパイクミス","サーブミス","レセプションミス","ディグミス","ドリブル","その他ミス"];
 /* 「誰が」セレクタ：コート上の6人＋リベロ（相手はサーブ順未登録なら番号入力） */
 function actorSelectorHTML(m, s, st){
-  const dis = s.finished ? " disabled" : "";
+  const locked = s.finished || m.status === "finished";
+  const dis = locked ? " disabled" : "";
   const opp = m.opponent || "相手";
   const btn = (team, num, extraCls, inner)=>{
     const on = selActor && selActor.team === team && selActor.num === num;
@@ -1515,7 +1531,7 @@ function actorSelectorHTML(m, s, st){
     h += "</div>";
   } else {
     const selThem = selActor && selActor.team === "them";
-    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + (dis || (!s.finished && deriveGuideStep() === 1) ? " disabled" : "") + ">" +
+    h += '<div class="actor-num-row"><input type="number" id="actor-them-num" min="1" max="99" inputmode="numeric" placeholder="番号" value="' + (selThem ? selActor.num : "") + '"' + (dis || (!locked && deriveGuideStep() === 1) ? " disabled" : "") + ">" +
       '<button class="actor-btn' + (selThem ? " on" : "") + '" id="btn-actor-them"' + dis + ">" + (selThem ? "解除" : "選択") + "</button></div>";
   }
   return h;
@@ -1537,7 +1553,8 @@ function renderInputCol(m, s, st){
     col.innerHTML = '<div class="setup-locked">⚙ まず上の「セット設定」でサーブ順を入力し、「✓ この設定を適用する」を押してください。適用すると得点・摘要の入力が使えます。</div>';
     return;
   }
-  const dis = s.finished ? " disabled" : "";
+  const locked = s.finished || m.status === "finished";
+  const dis = locked ? " disabled" : "";
   const opp = m.opponent || "相手";
   // 選択中の選手が交代などで対象から外れていたら選択を解除する
   if(selActor){
@@ -1551,7 +1568,7 @@ function renderInputCol(m, s, st){
   // （例：交代で選択中の選手がコートを離れて選択が解除された場合）
   if(guideStep === 3 && !selActor && !actorSkip) guideStep = deriveGuideStep();
   else if(guideStep === 2 && (selActor || actorSkip)) guideStep = 3;
-  const gz = s.finished ? 0 : guideStep;
+  const gz = locked ? 0 : guideStep;
   const zoneAttr = n=> ' class="step-zone' + (gz === n ? " guide" : "") +
     ((n === 2 && gz === 1) || (n === 3 && (gz === 1 || gz === 2)) ? " locked" : "") + '" data-zone="' + n + '"';
   let h = "";
@@ -1582,8 +1599,8 @@ function renderInputCol(m, s, st){
   h += '<div class="col-label">交代・タイムアウト</div><div class="util-btns">' +
     '<button class="ubtn" id="btn-sub-us"' + dis + ">交代（鎌ケ谷）</button>" +
     '<button class="ubtn" id="btn-sub-them"' + dis + ">交代（" + esc(opp) + "）</button>" +
-    '<button class="ubtn" id="btn-to-us"' + (s.finished || st.timeouts.us >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト 鎌ケ谷（残" + (TIMEOUT_MAX - st.timeouts.us) + "）</button>" +
-    '<button class="ubtn" id="btn-to-them"' + (s.finished || st.timeouts.them >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + esc(opp) + "（残" + (TIMEOUT_MAX - st.timeouts.them) + "）</button></div>";
+    '<button class="ubtn" id="btn-to-us"' + (locked || st.timeouts.us >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト 鎌ケ谷（残" + (TIMEOUT_MAX - st.timeouts.us) + "）</button>" +
+    '<button class="ubtn" id="btn-to-them"' + (locked || st.timeouts.them >= TIMEOUT_MAX ? " disabled" : "") + ">タイムアウト " + esc(opp) + "（残" + (TIMEOUT_MAX - st.timeouts.them) + "）</button></div>";
   h += '<div class="col-label">タイマー</div><div class="util-btns">' +
     '<button class="ubtn wide" id="btn-timer-open">⏱ タイマー（セット間3分／TO30秒）</button></div>';
   h += '<div class="col-label">修正</div><div class="util-btns">' +
@@ -1647,23 +1664,19 @@ function renderInputCol(m, s, st){
   const btu = document.getElementById("btn-to-us"); if(btu) btu.onclick = ()=> addTimeout("us");
   const btt = document.getElementById("btn-to-them"); if(btt) btt.onclick = ()=> addTimeout("them");
   const bf = document.getElementById("btn-finish-set2"); if(bf) bf.onclick = ()=>{
-    if(setEndReached(s, replaySet(s), setTargetFor(m, curSetIdx)) || confirmManualFinish()) finishSet();
+    if(setEndReached(s, replaySet(s), setTargetFor(m, curSetIdx))){ finishSet(); return; }
+    confirmModal("まだセット終了の点数に達していません。このセットを終了しますか？", "終了する", finishSet);
   };
   col.querySelectorAll("[data-madj]").forEach(b=> b.onclick = ()=>{
     const parts = b.getAttribute("data-madj").split(",");
     manualAdjust(parts[0], Number(parts[1]));
   });
 }
-function confirmManualFinish(){
-  let ok = false;
-  // 同期確認が必要なため簡易モーダルではなく標準confirmを使う場面のみ
-  ok = window.confirm("まだセット終了の点数に達していません。このセットを終了しますか？");
-  return ok;
-}
+
 
 /* ---------- 記録アクション ---------- */
 function addPoint(winner){
-  const m = getMatch(), s = getSet(); if(!m || !s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const st = replaySet(s);
   const srv = st.currentServer();
   const serveBefore = st.serve;
@@ -1718,7 +1731,7 @@ function uiApplyNote(text){
    {team, num} を渡すと「内容 No.○」として記録し actors にも構造化保持する。
    null を渡すと選手なし（メモ用）。 */
 function applyNote(text, actor){
-  const s = getSet(); if(!s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const r = lastRallyEntry(s);
   if(!r){ toast("先に得点を記録してください"); return; }
   if(actor === undefined) actor = selActor;
@@ -1733,7 +1746,7 @@ function applyNote(text, actor){
   saveDB(); renderMatch();
 }
 function addTimeout(team){
-  const s = getSet(); if(!s || s.finished) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.finished || m.status === "finished") return;
   const st = replaySet(s);
   if(st.timeouts[team] >= TIMEOUT_MAX){ toast("タイムアウトは1セット" + TIMEOUT_MAX + "回までです"); return; }
   s.log.push({ kind: "timeout", team: team });
@@ -1741,8 +1754,20 @@ function addTimeout(team){
   toast("タイムアウトを記録しました");
 }
 function undoLast(){
-  const s = getSet(); if(!s || s.log.length === 0) return;
+  const m = getMatch(), s = getSet(); if(!m || !s || s.log.length === 0) return;
+  if(m.status === "finished"){ showError("終了した試合は直せません。直す場合は『試合を再開』を押してください"); return; }
   if(s.finished){ showError("終了したセットは直せません。直す場合は『終了を取り消す』を押してください"); return; }
+  const last = s.log[s.log.length - 1];
+  if(last && last.kind === "rally" && last.note){
+    last.note = "";
+    last.actors = [];
+    actorSkip = false;
+    clearError();
+    guideStep = deriveGuideStep();
+    saveDB(); renderMatch();
+    toast("直前の摘要を取り消しました（得点は残っています）");
+    return;
+  }
   const removed = s.log.pop();
   actorSkip = false;
   clearError();
@@ -1922,7 +1947,7 @@ function scoreSeries(set){
   replaySet(set).rows.forEach(r=>{ if(r.kind === "rally") pts.push({ us: r.us, them: r.them }); });
   return pts;
 }
-function lineChartSVG(series){
+function lineChartSVG(series, oppName){
   if(series.length <= 1) return '<div class="stats-empty">このセットはまだ記録がありません。</div>';
   const W = 680, H = 250, pl = 36, pr = 16, pt = 16, pb = 28;
   const n = series.length - 1;
@@ -1932,8 +1957,8 @@ function lineChartSVG(series){
   const path = key => series.map((p,i)=> (i === 0 ? "M" : "L") + X(i).toFixed(1) + "," + Y(p[key]).toFixed(1)).join(" ");
   let g = "";
   [0, Math.round(maxS / 2), maxS].forEach(v=>{
-    g += '<line x1="' + pl + '" y1="' + Y(v) + '" x2="' + (W - pr) + '" y2="' + Y(v) + '" stroke="#d3ddee" stroke-width="1"/>' +
-      '<text x="' + (pl - 6) + '" y="' + (Y(v) + 4) + '" font-size="11" text-anchor="end" fill="#5a6b8c">' + v + "</text>";
+    g += '<line x1="' + pl + '" y1="' + Y(v) + '" x2="' + (W - pr) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-width="1"/>' +
+      '<text x="' + (pl - 6) + '" y="' + (Y(v) + 4) + '" font-size="11" text-anchor="end" fill="var(--sub)">' + v + "</text>";
   });
   const last = series[series.length - 1];
   return '<svg class="stats-svg" viewBox="0 0 ' + W + " " + H + '" role="img">' + g +
@@ -1941,9 +1966,9 @@ function lineChartSVG(series){
     '<path d="' + path("them") + '" fill="none" stroke="#ea580c" stroke-width="2.5"/>' +
     '<circle cx="' + X(n) + '" cy="' + Y(last.us) + '" r="4" fill="#2563eb"/>' +
     '<circle cx="' + X(n) + '" cy="' + Y(last.them) + '" r="4" fill="#ea580c"/>' +
-    '<text x="' + pl + '" y="' + (H - 8) + '" font-size="11" fill="#5a6b8c">ラリー数： ' + n + "</text>" +
+    '<text x="' + pl + '" y="' + (H - 8) + '" font-size="11" fill="var(--sub)">ラリー数： ' + n + "</text>" +
     '<text x="' + (W - pr) + '" y="' + (H - 8) + '" font-size="12" font-weight="700" text-anchor="end">' +
-      '<tspan fill="#2563eb">― 鎌ケ谷 ' + last.us + '</tspan><tspan fill="#ea580c">　― 相手 ' + last.them + "</tspan></text>" +
+      '<tspan fill="#3b82f6">― ' + "鎌ケ谷" + ' ' + last.us + '</tspan><tspan fill="#fb923c">　― ' + esc(oppName || "相手") + ' ' + last.them + "</tspan></text>" +
     "</svg>";
 }
 function barChartSVG(items, color){
@@ -1954,9 +1979,9 @@ function barChartSVG(items, color){
   items.forEach((it, i)=>{
     const y = i * rowH + 4;
     const bw = Math.round(barMax * it.value / max);
-    rows += '<text x="0" y="' + (y + 15) + '" font-size="13" fill="#16233d">' + esc(it.label) + "</text>" +
+    rows += '<text x="0" y="' + (y + 15) + '" font-size="13" fill="var(--txt)">' + esc(it.label) + "</text>" +
       '<rect x="' + labelW + '" y="' + y + '" width="' + (it.value > 0 ? Math.max(bw, 3) : 0) + '" height="17" rx="4" fill="' + color + '"/>' +
-      '<text x="' + (labelW + bw + 8) + '" y="' + (y + 15) + '" font-size="13" font-weight="700" fill="#16233d">' + it.value + "</text>";
+      '<text x="' + (labelW + bw + 8) + '" y="' + (y + 15) + '" font-size="13" font-weight="700" fill="var(--txt)">' + it.value + "</text>";
   });
   return '<svg class="stats-svg" viewBox="0 0 ' + W + " " + (items.length * rowH + 6) + '" role="img">' + rows + "</svg>";
 }
@@ -2000,7 +2025,7 @@ function renderStats(m){
   m.sets.forEach((s, i)=>{
     h += '<button class="chip' + (i === statsSetIdx ? " view-on" : "") + '" data-statset="' + i + '">第' + (i + 1) + "セット</button>";
   });
-  h += "</div>" + lineChartSVG(scoreSeries(sNow));
+  h += "</div>" + lineChartSVG(scoreSeries(sNow), opp);
   if(sNow && (sNow.manualUs || sNow.manualThem))
     h += '<div style="font-size:12px;color:var(--sub);">※ スコア手動修正は推移グラフに反映されません</div>';
   h += "</div>";
